@@ -1,58 +1,200 @@
-### AWS EC2 instance and security group creation
-- t2.xlarge instance
-- 32GB of storage recommended
-- Allow ports 4000 - 38888
-- Connect to ec2 via ssh
+# AWS EC2 Docker & NiFi Setup with Port Forwarding
 
-# connect to EC2
- ssh -i "ec2-sk.pem" ec2-user@ec2-98-84-126-230.compute-1.amazonaws.com
+This guide explains how to create an **AWS EC2 instance**, configure **security groups**, install **Docker & Docker Compose**, deploy services (NiFi, Jupyter, etc.), and prepare test data.
 
-# connect with port forwarding
-ssh -i "ec2-sk.pem" ec2-user@ec2-98-84-126-230.compute-1.amazonaws.com -L 2081:localhost:2041 -L 4888:localhost:4888 -L 2080:localhost:2080 -L 8050:localhost:8050 -L 4141:localhost:4141
+---
 
-# Copy files to EC2
-scp -r -i "ec2-sk.pem" docker_exp ec2-user@ec2-98-84-126-230.compute-1.amazonaws.com:/home/ec2-user/docker_exp
+## 1. EC2 Instance & Security Group Configuration
 
+### EC2 Instance
+
+* Instance type: **t2.xlarge**
+* Storage: **32 GB (recommended)**
+* OS: Amazon Linux
+
+### Security Group Rules
+
+* Allow inbound TCP ports: **4000 – 38888**
+* Allow SSH (port **22**) from your IP
+
+---
+
+## 2. Connect to EC2 via SSH
+
+### Basic SSH Connection
+
+```bash
+ssh -i "ec2-sk.pem" ec2-user@ec2-98-84-126-230.compute-1.amazonaws.com
+```
+
+### SSH with Port Forwarding
+
+```bash
+ssh -i "ec2-sk.pem" ec2-user@ec2-98-84-126-230.compute-1.amazonaws.com \
+-L 2081:localhost:2041 \
+-L 4888:localhost:4888 \
+-L 2080:localhost:2080 \
+-L 8050:localhost:8050 \
+-L 4141:localhost:4141
+```
+
+This allows access to EC2 services from your **local machine browser**.
+
+---
+
+## 3. Copy Project Files to EC2
+
+```bash
+scp -r -i "ec2-sk.pem" docker_exp \
+ec2-user@ec2-98-84-126-230.compute-1.amazonaws.com:/home/ec2-user/docker_exp
+```
+
+Verify files on EC2:
+
+```bash
 ls
 cd docker_exp
 ls
+```
 
+---
 
-- Commands to install Docker
+## 4. Install Docker & Docker Compose
+
+Update system:
+
+```bash
 sudo yum update -y
-sudo yum install docker
-sudo curl -L "https://github.com/docker/compose/releases/download/1.29.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+```
+
+Install Docker:
+
+```bash
+sudo yum install docker -y
+```
+
+Install Docker Compose:
+
+```bash
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.1/docker-compose-$(uname -s)-$(uname -m)" \
+-o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
+```
+
+Add user to Docker group:
+
+```bash
 sudo gpasswd -a $USER docker
 newgrp docker
-sudo yum install python-pip
+```
+
+Install Python Pip & Docker Compose (Python):
+
+```bash
+sudo yum install python-pip -y
 sudo pip install docker-compose
+```
 
-#Start Docker: 
+---
+
+## 5. Start Docker Services
+
+Start Docker daemon:
+
+```bash
 sudo systemctl start docker
+```
 
+Verify Docker:
+
+```bash
 docker ps
+```
+
+Start containers:
+
+```bash
 docker-compose up
+```
 
+---
+
+## 6. Access Docker Containers
+
+### List running containers
+
+```bash
+docker ps
+```
+
+### Access NiFi container CLI
+
+```bash
 docker exec -i -t nifi bash
-/opt/workspace/nifi/FakeDataset/customer_20241020045103.csv 
+```
 
+Example dataset location:
+
+```bash
+/opt/workspace/nifi/FakeDataset/customer_20241020045103.csv
+```
+
+Stop containers:
+
+```bash
 docker-compose down
+```
 
-#Stop Docker:
+---
+
+## 7. Stop Docker Service
+
+```bash
 sudo systemctl stop docker
+```
 
-#How to access tools in local machine
-    List Docker containers running: docker ps
-    CLI access in Docker container: docker exec -i -t nifi bash
-    Jupyter Lab at: http://ip_address:4888/lab? 
-    NiFi at: http://ip_address:2080/nifi/ 
+---
 
+## 8. Access Tools from Local Machine
 
-### Test data preparation
+Use your **EC2 Public IP** in the browser:
 
+* **Jupyter Lab**:
+  `http://<EC2_PUBLIC_IP>:4888/lab`
+
+* **Apache NiFi**:
+  `http://<EC2_PUBLIC_IP>:2080/nifi/`
+
+---
+
+## 9. Test Data Preparation
+
+Access NiFi container:
+
+```bash
 docker exec -i -t nifi bash
-cp /opt/workspace/nifi/FakeDataset/customer_20241020045103.csv scd/
-/opt/nifi/nifi-current/scd
+```
 
-/opt/workspace/nifi/FakeDataset/customer_20241020045103.csv 
+Copy test data:
+
+```bash
+cp /opt/workspace/nifi/FakeDataset/customer_20241020045103.csv scd/
+```
+
+Target directory:
+
+```bash
+/opt/nifi/nifi-current/scd
+```
+
+---
+
+## Notes
+
+* Replace `<EC2_PUBLIC_IP>` with your actual EC2 public IP
+* Ensure required ports are open in the Security Group
+* Docker must be running before using NiFi or Jupyter
+
+---
+
+✅ EC2 Docker & NiFi setup completed successfully
